@@ -17,19 +17,12 @@ Pre-installed and wired into login shells (`~/.bashrc`/`~/.profile`): Node 24 (v
 - Node gotcha: the base image also ships an older Node on `/exec-daemon` that wins on `PATH` in
   non-login shells. Run commands in a login shell (`bash -lc '...'`) or prepend
   `$HOME/.nvm/versions/node/v24.13.1/bin` so Node 24 (`engines.node: ^24.13.1`) is used.
-- `vp check` also runs the formatter (not just lint); markdown edits must be formatter-clean. Run
-  `vp check --fix` before committing.
+- `vp check` also runs the formatter. Follow the targeted verification policy in `AGENTS.md`; do not run repo-wide formatting or checks unless requested.
 
 ## Running the web app
 
-- `npm run dev` (from repo root) starts contracts (watch), web (Vite, port 5733), and the server
-  (`node --watch`, port 13773) together, auto-wiring `VITE_HTTP_URL`/`VITE_WS_URL`. Use
-  `npm run dev:server` / `npm run dev:web` for one side. If base ports are taken it auto-offsets to
-  the next free pair, so read the actual ports from stdout. Avoid production `build`/`start` in dev.
-- Auth/pairing: the server is unauthenticated by default and prints a pairing URL to stdout on startup
-  (e.g. `http://localhost:5733/pair#token=XXXX`). Open that URL in the browser to pair before the web
-  UI can talk to the server. Server state (SQLite, auth, projects) lives under `~/.t3`
-  (`T3CODE_HOME`); multiple `npm run dev` instances bind different ports but share that same DB.
+- Follow `AGENTS.md` and `.agents/skills/test-t3-app/SKILL.md` for the current dev runner, isolated state, pairing and lifecycle. Use `vp run dev`; read actual ports and pairing URLs from its output. Do not set `VITE_HTTP_URL` or `VITE_WS_URL` for dev.
+- Never use shared `~/.t3/userdata` as test state. Worktree state is isolated; an explicit `--home-dir` must name a test-owned directory. Keep pairing tokens single-use and separate the agent's session from a token handed to the user.
 - Agent providers are external CLIs (`codex`, `claude`, `cursor-agent`, `opencode`) probed on `PATH`.
   Without one installed the UI loads but no agent can run. Claude Code
   (`npm i -g @anthropic-ai/claude-code`) works headlessly using `ANTHROPIC_API_KEY` from the
@@ -66,7 +59,7 @@ Gradle auto-downloads any additional pinned SDK packages on demand.
   Android app builds requires an app/patch change (add the Android Kotlin setters), which is out of
   scope for environment setup.
 
-## Known flaky tests (unrelated to setup)
+## Historical test observations (recheck before attributing a failure)
 
 - `apps/server/src/git/GitManager.test.ts` (cross-repo PR metadata, can time out at 12s).
 - `apps/server/src/provider/Layers/ProviderRegistry.test.ts` (codex binaryPath re-probe ordering).

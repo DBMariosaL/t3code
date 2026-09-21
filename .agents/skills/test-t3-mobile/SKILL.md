@@ -1,6 +1,6 @@
 ---
 name: test-t3-mobile
-description: Test T3 Code's native iOS and Android app through its Device panel and returned AgentDevice command. Use for mobile verification, native-client builds, Metro launch, and mobile pairing against isolated development state.
+description: "Test T3 Mobile against isolated local state on an iOS Simulator or Android Emulator. Use for mobile UI/native changes, pairing or phone/tablet reproduction."
 ---
 
 # Test T3 Mobile

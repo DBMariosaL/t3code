@@ -1,6 +1,6 @@
 ---
 name: test-t3-app
-description: Test T3 Code's web and desktop UI through its built-in Browser panel against isolated development state. Use for browser verification, browser pairing recovery, and test fixtures. Use test-t3-mobile for native mobile verification.
+description: "Run and test the T3 web client with isolated state and single-use pairing. Use for local UI verification, pairing recovery or test fixtures; not mobile-native testing."
 ---
 
 # Test T3 web and desktop
