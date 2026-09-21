@@ -6,6 +6,7 @@ import {
   ClientSettingsSchema,
   ClientSettingsPatch,
   ClaudeSettings,
+  PiAgentSettings,
   DEFAULT_SERVER_SETTINGS,
   resolveProviderInstanceEnabled,
   ServerSettings,
@@ -19,6 +20,39 @@ const decodeServerSettings = Schema.decodeUnknownSync(ServerSettings);
 const decodeServerSettingsPatch = Schema.decodeUnknownSync(ServerSettingsPatch);
 const encodeServerSettings = Schema.encodeSync(ServerSettings);
 const decodeClaudeSettings = Schema.decodeUnknownSync(ClaudeSettings);
+const decodePiSettings = Schema.decodeSync(PiAgentSettings);
+
+describe("Pi Agent settings", () => {
+  it("keeps Pi opt-in when decoding existing settings", () => {
+    expect(decodePiSettings({})).toEqual({
+      enabled: false,
+      binaryPath: "pi",
+      customModels: [],
+    });
+    expect(decodeServerSettings({}).providers.piAgent.enabled).toBe(false);
+    expect(
+      resolveProviderInstanceEnabled({ driver: ProviderDriverKind.make("piAgent"), config: {} }),
+    ).toBe(false);
+  });
+
+  it("round-trips Pi configuration and accepts partial updates", () => {
+    const settings = decodeServerSettings({
+      providers: {
+        piAgent: {
+          enabled: true,
+          binaryPath: "C:/tools/pi.cmd",
+          customModels: ["openai/custom"],
+        },
+      },
+    });
+    expect(decodeServerSettings(encodeServerSettings(settings)).providers.piAgent).toEqual(
+      settings.providers.piAgent,
+    );
+    expect(decodeServerSettingsPatch({ providers: { piAgent: { enabled: false } } })).toEqual({
+      providers: { piAgent: { enabled: false } },
+    });
+  });
+});
 
 describe("storage cleanup settings", () => {
   it("keeps cleanup disabled for existing installations", () => {

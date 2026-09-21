@@ -610,6 +610,24 @@ it.layer(NodeServices.layer)("server settings", (it) => {
     }).pipe(Effect.provide(makeServerSettingsLayer())),
   );
 
+  it.effect("restores used Pi instances while preserving explicit disables", () =>
+    Effect.gen(function* () {
+      const config = yield* ServerConfig.ServerConfig;
+      const fs = yield* FileSystem.FileSystem;
+      const service = yield* ServerSettingsModule.ServerSettingsService;
+      yield* fs.writeFileString(
+        config.settingsPath,
+        '{"providers":{"piAgent":{"enabled":false}},"providerInstances":{"pi_work":{"driver":"piAgent","config":{}},"pi_disabled":{"driver":"piAgent","enabled":false,"config":{}}}}',
+      );
+      yield* recordProviderUsage("piAgent", "pi_work");
+      yield* recordProviderUsage("piAgent", "pi_disabled");
+      const settings = yield* service.getSettings;
+      assert.isFalse(settings.providers.piAgent.enabled);
+      assert.isTrue(settings.providerInstances[ProviderInstanceId.make("pi_work")]?.enabled);
+      assert.isFalse(settings.providerInstances[ProviderInstanceId.make("pi_disabled")]?.enabled);
+    }).pipe(Effect.provide(makeServerSettingsLayer())),
+  );
+
   it.effect("preserves existing provider instances without explicit enabled flags", () =>
     Effect.gen(function* () {
       const serverConfig = yield* ServerConfig.ServerConfig;
@@ -1043,6 +1061,9 @@ it.layer(NodeServices.layer)("server settings", (it) => {
             enabled: false,
           },
           grok: {
+            enabled: false,
+          },
+          piAgent: {
             enabled: false,
           },
           opencode: {

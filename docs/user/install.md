@@ -113,6 +113,7 @@ computer.
 | Cursor      | Install [Cursor CLI](https://cursor.com/cli), then run `agent login`.                        |
 | Grok Build  | Install [Grok Build CLI](https://x.ai/cli), then run `grok login`.                           |
 | OpenCode    | Install [OpenCode](https://opencode.ai), then run `opencode auth login`.                     |
+| Pi Agent    | Install [Pi](https://github.com/earendil-works/pi), then start `pi` and run `/login`.        |
 | Antigravity | Install and sign in with Google from T3 Code's provider settings.                            |
 
 Provider CLIs must be on the server's `PATH`. If T3 Code cannot find one, set its
@@ -126,6 +127,31 @@ installer owns the CLI (its own update command, Homebrew, or a global npm, pnpm,
 bun, or Vite+ install) and runs that installer. Otherwise update the CLI the same
 way you installed it. Homebrew installs compare against the version Homebrew
 offers, which can trail the npm release by a few hours.
+
+### Pi Agent preview
+
+Pi requires version 0.82.0 or newer and **Full access** mode. This preview supports text
+conversations, streamed responses and tool activity, interruption, session resume, model changes
+between turns, and extension input dialogs. Pi has no native sandbox; T3 rejects protected modes
+for this provider. Attachments and plan mode are not supported yet.
+
+With Pi 0.85.0 or newer, the model controls show the reasoning levels reported by Pi.
+Without an explicit selection, Pi keeps its own reasoning setting. T3 checks the selected
+level when applying it and restores your conversation's choices after resume and `/reload`.
+Wait for the current turn to finish before changing model options.
+
+Native OpenAI Responses and Codex Responses models also offer **Default** and **Fast**.
+Fast requests priority service; it does not guarantee lower latency and may increase usage
+costs. Default removes the priority request. A provider refusal appears as a failed turn.
+These choices belong to the conversation and do not change Pi's global preferences.
+
+Send `/reload` while Pi is idle to reload its extensions, skills, prompts, and context files
+without restarting the session. Stop an active turn before reloading. Other interactive Pi
+terminal commands are not necessarily available in T3.
+
+Pi's own tools and extensions run on the server machine. T3's MCP tools are not yet connected
+to Pi. Titles and source-control text generation run with Pi tools and automatic extension
+loading disabled.
 
 Add another provider instance for a separate account or configuration. Each
 instance can have its own environment variables, such as API keys or a custom

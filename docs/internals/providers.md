@@ -35,6 +35,61 @@ client connections and provider-instance rebuilds. Releases are immutable, with 
 selecting the version for new processes. Running processes hold leases on their version. Updates
 and removal must respect those leases instead of replacing executables under a running agent.
 
+### Pi RPC discovery
+
+`apps/server/src/provider/pi/` contains Pi's discovery transport, session runtime, and adapter.
+The driver is opt-in and requires Pi 0.82.0 or newer. Chat currently accepts only full-access
+text sessions. Protected runtime modes, attachments, plan mode, and T3 MCP tools are unsupported.
+
+Discovery owns a scoped `pi --mode rpc --no-session --no-extensions` process. It keeps stdin
+open until replies to `get_state`, `get_available_models`, and `get_commands` arrive, correlates
+each reply by request ID and command, and closes the process on success, failure, timeout, or
+cancellation. Extension commands are consequently absent from this discovery mode.
+
+The decoder preserves event payloads but rejects malformed response envelopes. Model IDs use
+`provider/id` because different Pi model providers can expose the same ID. Discovery does not
+prove authentication and a reasoning flag does not establish supported thinking levels, so
+neither is inferred from the model list.
+
+On Pi 0.85.0 and newer, a second scoped discovery process selects each available model and
+queries `get_available_thinking_levels` in order. Automatic extensions remain disabled. Only
+successful probes advertise `reasoningEffort`; native `openai-responses` and
+`openai-codex-responses` APIs also advertise `serviceTier`. Older versions keep the preview's
+basic controls. RPC model changes in the probed version affect the disposable session only.
+
+The adapter uses the existing per-thread `ModelSelection.options` persistence, validates
+reasoning through RPC, and reads back the effective state. The bundled extension reads a
+session-owned options file in `before_provider_request` to add priority or remove the service
+tier field. Reload reuses this file; restarting recreates it from the thread selection. No
+global Pi settings or third-party extensions are written. Fast represents a request for
+priority, not proof that the upstream service granted it. Other Pi extensions can modify
+the request after T3's hook.
+
+Run the focused baseline from the repository root with:
+
+```sh
+node node_modules/vite-plus/bin/vp test run apps/server/src/provider/Layers/ProviderInstanceRegistryLive.test.ts apps/server/src/provider/pi apps/server/src/textGeneration/PiTextGeneration.test.ts
+```
+
+`PiOptions.integration.test.ts` additionally runs the installed Pi CLI when
+`T3_PI_TEST_CLI` names its JavaScript entry point. It uses disposable configuration and a
+loopback HTTP fixture, including Codex's compressed request body, so it does not spend API
+credits. It checks defaults, reasoning, priority, refusal, reload, resume, and return to normal
+through both native Responses implementations. Real client and upstream account validation
+remain separate from this transport test. `.t3-pi-test/` is ignored test state.
+
+Each conversation owns one process and a temporary T3 extension file. Request IDs correlate RPC
+replies independently of the event consumer, so extension dialogs do not block transport reads.
+`agent_settled`, rather than `agent_end`, settles the T3 turn after retries and queued continuations.
+An event-consumer barrier prevents the adapter from reporting reload success before processing an
+extension error. A lost process fails pending requests; restarting uses the saved session file.
+
+`/reload` invokes the bundled `t3-reload` extension command, which awaits Pi's `ctx.reload()`.
+This reloads resources inside the existing Pi process. The adapter rejects reload while a turn
+is active, verifies that the bridge loaded at startup, and preserves the session cursor.
+Pi's `fork` command implements rollback. Text-generation helpers use isolated, non-persistent
+sessions with tools and automatic extension, skill, and prompt-template loading disabled.
+
 ## Setup must not happen as a health-check side effect
 
 Opening a provider session can start MCP servers, run hooks, or launch a login browser.

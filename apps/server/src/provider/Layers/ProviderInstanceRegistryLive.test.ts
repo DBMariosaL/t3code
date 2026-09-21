@@ -54,6 +54,7 @@ import { CodexDriver } from "../Drivers/CodexDriver.ts";
 import { CursorDriver } from "../Drivers/CursorDriver.ts";
 import { GrokDriver } from "../Drivers/GrokDriver.ts";
 import { OpenCodeDriver } from "../Drivers/OpenCodeDriver.ts";
+import { PiDriver } from "../Drivers/PiDriver.ts";
 import * as ModelManifest from "../ModelManifest.ts";
 import { OpenCodeRuntimeLive } from "../opencodeRuntime.ts";
 import * as CodexResetCredit from "./codexResetCredit.ts";
@@ -460,6 +461,34 @@ describe("ProviderInstanceRegistryLive — all drivers slice", () => {
     Layer.provideMerge(Layer.succeed(ProviderEventLoggers, NoOpProviderEventLoggers)),
     Layer.provideMerge(ModelManifest.layerTest),
     Layer.provideMerge(CodexResetCredit.layerTest),
+  );
+
+  it.live("boots isolated Pi instances without invoking a disabled binary", () =>
+    Effect.gen(function* () {
+      const firstId = ProviderInstanceId.make("pi_personal");
+      const secondId = ProviderInstanceId.make("pi_work");
+      const entry = {
+        driver: PiDriver.driverKind,
+        enabled: false,
+        config: PiDriver.defaultConfig(),
+      };
+      const { registry } = yield* makeProviderInstanceRegistry<BuiltInDriversEnv>({
+        configMap: { [firstId]: entry, [secondId]: entry },
+        drivers: [PiDriver],
+      });
+      const instances = yield* registry.listInstances;
+      expect(instances).toHaveLength(2);
+      const first = instances.find((instance) => instance.instanceId === firstId)!;
+      const second = instances.find((instance) => instance.instanceId === secondId)!;
+      expect(first.adapter).not.toBe(second.adapter);
+      expect(first.textGeneration).not.toBe(second.textGeneration);
+      expect(first.continuationIdentity).not.toEqual(second.continuationIdentity);
+      const snapshot = yield* first.snapshot.getSnapshot;
+      expect(snapshot.instanceId).toBe(firstId);
+      expect(snapshot.driver).toBe("piAgent");
+      expect(snapshot.enabled).toBe(false);
+      expect(snapshot.continuation?.groupKey).toBe(`piAgent:instance:${firstId}`);
+    }).pipe(Effect.provide(testLayer)),
   );
 
   it.live("boots one instance of every shipped driver from a single config map", () =>
